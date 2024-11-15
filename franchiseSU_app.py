@@ -272,6 +272,112 @@ def revenue_projections_tab():
     )
     
     st.plotly_chart(fig, use_container_width=True)
+    
+    # After creating the revenue projections and before the chart
+    st.markdown("---")
+    st.header('Scenario Impact Analysis')
+    
+    # Calculate revenues and profits for selected scenario
+    selected_revenues = calculate_scenario_revenues(
+        base_revenue, 
+        selected_scenario, 
+        growth_rate, 
+        weak_pct, 
+        above_pct
+    )
+    
+    # Calculate key metrics
+    year1_revenue = selected_revenues[0]
+    year10_revenue = selected_revenues[-1]
+    avg_revenue = sum(selected_revenues) / len(selected_revenues)
+    
+    year1_profit = year1_revenue * 0.2507
+    year10_profit = year10_revenue * 0.2507
+    avg_profit = avg_revenue * 0.2507
+    
+    # Display metrics in columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("Year 1")
+        st.write(f"Revenue: **${year1_revenue:,.0f}**")
+        st.write(f"Profit: **${year1_profit:,.0f}**")
+        
+        # Calculate and show change from baseline
+        rev_change = ((year1_revenue - base_revenue) / base_revenue) * 100
+        profit_change = ((year1_profit - (base_revenue * 0.2507)) / (base_revenue * 0.2507)) * 100
+        st.write(f"Revenue Change: **{rev_change:+.1f}%**")
+        st.write(f"Profit Change: **{profit_change:+.1f}%**")
+    
+    with col2:
+        st.subheader("Year 10")
+        st.write(f"Revenue: **${year10_revenue:,.0f}**")
+        st.write(f"Profit: **${year10_profit:,.0f}**")
+        
+        # Calculate total growth
+        total_rev_growth = ((year10_revenue - year1_revenue) / year1_revenue) * 100
+        st.write(f"Total Growth: **{total_rev_growth:+.1f}%**")
+        st.write(f"Avg Annual Growth: **{growth_rate:+.1f}%**")
+    
+    with col3:
+        st.subheader("10-Year Average")
+        st.write(f"Revenue: **${avg_revenue:,.0f}**")
+        st.write(f"Profit: **${avg_profit:,.0f}**")
+        st.write(f"Monthly Revenue: **${avg_revenue/12:,.0f}**")
+        st.write(f"Monthly Profit: **${avg_profit/12:,.0f}**")
+    
+    # Continue with the existing chart display
+    st.markdown("---")
+    st.header('Revenue Projection Chart')
+    
+    # Create visualization
+    fig = go.Figure()
+    years = list(range(1, 11))
+    
+    # Define scenarios
+    scenarios = {
+        'Weak Demand': {'growth_rate': -2.0, 'color': 'red'},
+        'Average Demand': {'growth_rate': 5.0, 'color': 'blue'},
+        'Above Average Demand': {'growth_rate': 10.0, 'color': 'green'}
+    }
+    
+    # Add lines for all scenarios
+    for scenario in scenarios:
+        if scenario == selected_scenario:
+            scenario_growth = growth_rate
+        else:
+            scenario_growth = scenarios[scenario]['growth_rate']
+        
+        revenues = calculate_scenario_revenues(
+            base_revenue, 
+            scenario, 
+            scenario_growth, 
+            weak_pct, 
+            above_pct
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=years,
+                y=revenues,
+                name=scenario,
+                line=dict(
+                    color=scenarios[scenario]['color'],
+                    width=3 if scenario == selected_scenario else 1.5,
+                    dash='solid' if scenario == selected_scenario else 'dot'
+                )
+            )
+        )
+    
+    fig.update_layout(
+        title="Revenue Projections Comparison",
+        xaxis_title="Year",
+        yaxis_title="Revenue ($)",
+        template='plotly_white',
+        hovermode='x unified'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 def financial_analysis_tab():
     st.title('Financial Analysis')
