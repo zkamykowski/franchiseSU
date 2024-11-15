@@ -533,7 +533,7 @@ def financial_analysis_tab():
     starting_revenue = base_revenue * (1 + start_pct/100)
     
     years = range(1, 11)
-    revenues = [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
+    revenues = calculate_scenario_revenues(base_revenue, selected_revenue, growth_rate, years)
     
     # Adjust profit margins for each year based on cost growth
     base_margin = 0.2507  # Initial gross profit margin
@@ -685,7 +685,7 @@ def financial_analysis_tab():
     st.session_state.current_irr = irr
     st.session_state.current_payback = payback
     st.session_state.current_revenues = revenues
-    st.session_state.current_profits = profits
+    st.session_state.current_profits = cash_flows
     st.session_state.current_margins = adjusted_margins
     st.session_state.current_investment = initial_investment
     st.session_state.current_cost_growth = cost_growth_rate
