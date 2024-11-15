@@ -236,34 +236,73 @@ def revenue_projections_tab():
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # Scenario Impact Analysis with three columns
+    # Scenario Impact Analysis with clear grouping and consistent metrics
     st.header('Scenario Impact Analysis')
     
+    # Calculate all metrics first
+    metrics = {
+        'Year 1': {
+            'revenue': revenues[0],
+            'monthly_revenue': revenues[0] / 12,
+            'profit': profits[0],
+            'margin': profits[0] / revenues[0],
+            'revenue_change': (revenues[0]/base_revenue - 1) * 100,
+            'profit_change': (profits[0]/(base_revenue * base_margin) - 1) * 100
+        },
+        'Year 10': {
+            'revenue': revenues[-1],
+            'monthly_revenue': revenues[-1] / 12,
+            'profit': profits[-1],
+            'margin': profits[-1] / revenues[-1],
+            'revenue_change': (revenues[-1]/revenues[0] - 1) * 100,
+            'margin_change': (adjusted_margins[-1]/base_margin - 1) * 100
+        },
+        '10-Year Average': {
+            'revenue': sum(revenues) / len(revenues),
+            'monthly_revenue': sum(revenues) / len(revenues) / 12,
+            'profit': sum(profits) / len(profits),
+            'margin': sum(profits) / sum(revenues),
+            'avg_annual_growth': ((revenues[-1]/revenues[0]) ** (1/9) - 1) * 100,
+            'avg_margin_impact': (sum(adjusted_margins) / len(adjusted_margins) / base_margin - 1) * 100
+        }
+    }
+
+    # Create three columns
     col1, col2, col3 = st.columns(3)
     
-    with col1:
-        st.subheader('Year 1')
-        st.write(f"Revenue: ${revenues[0]:,.0f}")
-        st.write(f"Profit: ${profits[0]:,.0f}")
-        st.write(f"Revenue Change: {((revenues[0]/base_revenue - 1) * 100):+.1f}%")
-        st.write(f"Profit Change: {((profits[0]/(base_revenue * base_margin) - 1) * 100):+.1f}%")
-        
-    with col2:
-        st.subheader('Year 10')
-        st.write(f"Revenue: ${revenues[-1]:,.0f}")
-        st.write(f"Profit: ${profits[-1]:,.0f}")
-        st.write(f"Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):+.1f}%")
-        st.write(f"Margin Impact: {((adjusted_margins[-1]/base_margin - 1) * 100):+.1f}%")
-    
-    with col3:
-        st.subheader('10-Year Average')
-        avg_revenue = sum(revenues) / len(revenues)
-        avg_profit = sum(profits) / len(profits)
-        avg_margin = avg_profit / avg_revenue
-        st.write(f"Revenue: ${avg_revenue:,.0f}")
-        st.write(f"Profit: ${avg_profit:,.0f}")
-        st.write(f"Monthly Revenue: ${avg_revenue/12:,.0f}")
-        st.write(f"Average Margin: {(avg_margin * 100):.1f}%")
+    # Display metrics in a consistent format
+    columns = [col1, col2, col3]
+    for col, (period, data) in zip(columns, metrics.items()):
+        with col:
+            st.subheader(period)
+            
+            # Annual Revenue (consistent across all periods)
+            st.write("##### Annual Revenue")
+            st.write(f"${data['revenue']:,.0f}")
+            
+            # Monthly Revenue (consistent across all periods)
+            st.write("##### Monthly Revenue")
+            st.write(f"${data['monthly_revenue']:,.0f}")
+            
+            # Profit (consistent across all periods)
+            st.write("##### Profit")
+            st.write(f"${data['profit']:,.0f}")
+            
+            # Margin (consistent across all periods)
+            st.write("##### Margin")
+            st.write(f"{(data['margin'] * 100):.1f}%")
+            
+            # Period-specific metrics
+            st.write("##### Change Metrics")
+            if period == 'Year 1':
+                st.write(f"Revenue vs Baseline: {data['revenue_change']:+.1f}%")
+                st.write(f"Profit vs Baseline: {data['profit_change']:+.1f}%")
+            elif period == 'Year 10':
+                st.write(f"Total Revenue Growth: {data['revenue_change']:+.1f}%")
+                st.write(f"Total Margin Impact: {data['margin_change']:+.1f}%")
+            else:  # 10-Year Average
+                st.write(f"Avg Annual Growth: {data['avg_annual_growth']:+.1f}%")
+                st.write(f"Avg Margin Impact: {data['avg_margin_impact']:+.1f}%")
 
     # Move baseline metrics to the bottom
     st.header('Baseline Performance (July 2023 - June 2024)')
