@@ -329,51 +329,62 @@ def revenue_projections_tab():
 def financial_analysis_tab():
     st.title('Financial Analysis')
     
-    # Get values from previous tabs
-    startup_costs = {
-        'Low Cost': 417500,
-        'Average Cost': 650500,
-        'High Cost': 883500
-    }
-    
-    base_revenue = 530899
-    
-    # User inputs
+    # Cost scenario selection
     col1, col2 = st.columns(2)
     with col1:
-        selected_cost = st.selectbox(
-            'Initial Investment Scenario',
-            ['Low Cost', 'Average Cost', 'High Cost']
+        cost_scenario = st.selectbox(
+            'Select Cost Scenario',
+            ['Average Costs', 'Below Average Costs', 'Above Average Costs']
         )
     
+    # Cost growth rate input based on scenario
     with col2:
+        if cost_scenario == 'Below Average Costs':
+            default_cost_growth = 2.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=10.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 2% for Below Average scenario"
+            )
+        elif cost_scenario == 'Above Average Costs':
+            default_cost_growth = 7.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=15.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 7% for Above Average scenario"
+            )
+        else:  # Average Costs
+            default_cost_growth = 3.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=12.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 3% for Average scenario"
+            )
+
+    # Revenue scenario selection
+    col3, col4 = st.columns(2)
+    with col3:
         selected_revenue = st.selectbox(
-            'Revenue Scenario',
+            'Select Revenue Scenario',
             ['Average Demand', 'Weak Demand', 'Above Average Demand']
         )
     
-    # Discount rate selection
-    discount_rate = st.slider(
-        'Discount Rate (%)',
-        min_value=8.0,
-        max_value=20.0,
-        value=13.0,
-        step=0.5,
-        help="Industry standard for small franchise operations typically ranges from 12-15%"
-    )
-    
-    # Calculate cash flows based on selected scenario
-    if selected_revenue == 'Weak Demand':
-        start_pct = 15  # 15% below baseline
-        growth_rate = 0  # 0% growth
-    elif selected_revenue == 'Above Average Demand':
-        start_pct = 15  # 15% above baseline
-        growth_rate = 10  # 10% growth
-    else:
-        start_pct = 0  # baseline
-        growth_rate = 5  # 5% growth
-    
-    # Calculate annual cash flows
+    # Calculate adjusted margins based on cost growth
+    def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
+        cost_multiplier = (1 + cost_growth_rate/100) ** year
+        # Adjust the margin inversely to cost growth
+        return base_margin - (base_margin * (cost_multiplier - 1))
+
+    # Calculate cash flows with cost adjustments
     initial_investment = startup_costs[selected_cost]
     starting_revenue = base_revenue * (1 + start_pct/100 if selected_revenue == 'Above Average Demand' 
                                      else 1 - start_pct/100 if selected_revenue == 'Weak Demand' 
@@ -381,9 +392,13 @@ def financial_analysis_tab():
     
     years = range(1, 11)
     revenues = [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
-    cash_flows = [rev * 0.2507 for rev in revenues]  # Using gross profit margin
     
-    # Calculate metrics
+    # Adjust profit margins for each year based on cost growth
+    base_margin = 0.2507  # Initial gross profit margin
+    adjusted_margins = [calculate_adjusted_margins(base_margin, year, cost_growth_rate) for year in years]
+    cash_flows = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
+    
+    # Calculate metrics with adjusted cash flows
     npv, irr, payback = calculate_npv_metrics(initial_investment, cash_flows, discount_rate)
     
     # Display metrics
@@ -397,13 +412,36 @@ def financial_analysis_tab():
     with col3:
         st.metric("Payback Period", f"{payback:.1f} years" if payback is not None else "N/A")
     
-    # Visualization
-    st.header('Cash Flow Analysis')
+    # Add margin analysis chart
+    st.header('Margin Analysis')
+    fig_margins = go.Figure()
     
-    # Create cash flow waterfall chart
+    fig_margins.add_trace(go.Scatter(
+        x=list(years),
+        y=[margin * 100 for margin in adjusted_margins],
+        name='Adjusted Gross Margin',
+        line=dict(color='blue')
+    ))
+    
+    fig_margins.add_trace(go.Scatter(
+        x=list(years),
+        y=[base_margin * 100] * len(years),
+        name='Base Gross Margin',
+        line=dict(color='gray', dash='dash')
+    ))
+    
+    fig_margins.update_layout(
+        title="Gross Margin Projection",
+        xaxis_title="Year",
+        yaxis_title="Gross Margin (%)",
+        template='plotly_white'
+    ))
+    
+    st.plotly_chart(fig_margins, use_container_width=True, key="margin_analysis_chart")
+    
+    # Update waterfall chart to show cost impact
     fig_waterfall = go.Figure()
     
-    # Add initial investment
     fig_waterfall.add_trace(go.Waterfall(
         name="Cash Flow",
         orientation="v",
@@ -417,79 +455,24 @@ def financial_analysis_tab():
     ))
     
     fig_waterfall.update_layout(
-        title="Cash Flow Waterfall",
+        title="Cash Flow Waterfall (Including Cost Effects)",
         showlegend=False,
         xaxis_title="Period",
         yaxis_title="Cash Flow ($)",
         template='plotly_white'
     )
     
-    st.plotly_chart(fig_waterfall, use_container_width=True)
+    st.plotly_chart(fig_waterfall, use_container_width=True, key="waterfall_chart")
     
-    # Cumulative NPV chart
-    cumulative_npv = []
-    for i in range(len(cash_flows)):
-        cf = [-initial_investment] + cash_flows[:i+1]
-        cumulative_npv.append(npf.npv(discount_rate/100, cf))
-    
-    fig_npv = go.Figure()
-    fig_npv.add_trace(go.Scatter(
-        x=list(years),
-        y=cumulative_npv,
-        mode='lines+markers',
-        name='Cumulative NPV'
-    ))
-    
-    fig_npv.update_layout(
-        title="Cumulative NPV Over Time",
-        xaxis_title="Year",
-        yaxis_title="Cumulative NPV ($)",
-        template='plotly_white'
-    )
-    
-    st.plotly_chart(fig_npv, use_container_width=True)
-    
-    # Sensitivity analysis
-    st.header('Sensitivity Analysis')
-    
-    # Create sensitivity matrix for NPV
-    discount_rates = [discount_rate-2, discount_rate, discount_rate+2]
-    growth_rates = [growth_rate-2, growth_rate, growth_rate+2]
-    
-    sensitivity_matrix = []
-    for d_rate in discount_rates:
-        row = []
-        for g_rate in growth_rates:
-            revenues = [starting_revenue * (1 + g_rate/100) ** (year-1) for year in years]
-            cash_flows = [rev * 0.2507 for rev in revenues]
-            npv, _, _ = calculate_npv_metrics(initial_investment, cash_flows, d_rate)
-            row.append(npv)
-        sensitivity_matrix.append(row)
-    
-    fig_sensitivity = go.Figure(data=go.Heatmap(
-        z=sensitivity_matrix,
-        x=[f"{rate}%" for rate in growth_rates],
-        y=[f"{rate}%" for rate in discount_rates],
-        colorscale='RdBu'
-    ))
-    
-    fig_sensitivity.update_layout(
-        title="NPV Sensitivity Analysis",
-        xaxis_title="Growth Rate",
-        yaxis_title="Discount Rate",
-        template='plotly_white'
-    )
-    
-    st.plotly_chart(fig_sensitivity, use_container_width=True)
-    
-    # Risk analysis
+    # Update risk assessment
     st.header('Risk Assessment')
     st.write(f"""
     **Key Risk Factors:**
     1. Initial Investment Risk: Selected scenario assumes **${startup_costs[selected_cost]:,.0f}** investment level
     2. Revenue Risk: **{selected_revenue}** scenario with **{growth_rate:.1f}%** annual growth
-    3. Margin Risk: Analysis assumes stable **25.07%** gross profit margin
-    4. Market Risk: Captured in **{discount_rate:.1f}%** discount rate
+    3. Cost Risk: **{cost_scenario}** with **{cost_growth_rate:.1f}%** annual growth
+    4. Margin Risk: Starting margin of **25.07%** declining to **{(adjusted_margins[-1]*100):.2f}%** by Year 10
+    5. Market Risk: Captured in **{discount_rate:.1f}%** discount rate
     
     **Break-even Analysis:**
     - Time to break-even: **{payback:.1f}** years
@@ -499,6 +482,7 @@ def financial_analysis_tab():
     - Initial Investment: **${initial_investment:,.0f}**
     - Year 1 Revenue: **${revenues[0]:,.0f}**
     - Year 1 Cash Flow: **${cash_flows[0]:,.0f}**
+    - Year 10 Cash Flow: **${cash_flows[-1]:,.0f}**
     - 10-Year NPV: **${npv:,.0f}**
     """)
 
