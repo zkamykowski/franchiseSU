@@ -679,9 +679,150 @@ def financial_analysis_tab():
     - Year 10 Cash Flow: **${cash_flows[-1]:,.0f}**
     - 10-Year NPV: **${npv:,.0f}**
     """)
+    
+    # Store current values in session state
+    st.session_state.current_npv = npv
+    st.session_state.current_irr = irr
+    st.session_state.current_payback = payback
+    st.session_state.current_revenues = revenues
+    st.session_state.current_profits = profits
+    st.session_state.current_margins = adjusted_margins
+    st.session_state.current_investment = initial_investment
+    st.session_state.current_cost_growth = cost_growth_rate
+    st.session_state.current_growth_rate = growth_rate
+    st.session_state.current_revenue_scenario = selected_revenue
+    st.session_state.current_cost_scenario = cost_scenario
+
+def generate_investment_report(npv, irr, payback, initial_investment, revenues, profits, adjusted_margins, 
+                             cost_growth_rate, growth_rate, selected_revenue, cost_scenario):
+    """Generate a comprehensive investment analysis report"""
+    
+    # Investment Overview
+    overview = f"""
+    ## Investment Overview
+    Based on the selected scenario analysis ({selected_revenue} with {cost_scenario}), 
+    this franchise opportunity requires an initial investment of ${initial_investment:,.0f} and shows the following key metrics:
+    
+    * Net Present Value (NPV): ${npv:,.0f}
+    * Internal Rate of Return (IRR): {irr:.1f}%
+    * Payback Period: {payback:.1f} years
+    """
+    
+    # Financial Performance
+    year_10_revenue = revenues[-1]
+    year_10_profit = profits[-1]
+    avg_revenue = sum(revenues) / len(revenues)
+    avg_profit = sum(profits) / len(profits)
+    final_margin = adjusted_margins[-1]
+    
+    performance = f"""
+    ## Financial Performance
+    The business is projected to grow from ${revenues[0]:,.0f} in Year 1 to ${year_10_revenue:,.0f} in Year 10, 
+    with an annual growth rate of {growth_rate:.1f}%. The average annual revenue over the 10-year period is ${avg_revenue:,.0f}.
+    
+    Profitability metrics show:
+    * Average annual profit: ${avg_profit:,.0f}
+    * Final year profit: ${year_10_profit:,.0f}
+    * Ending gross margin: {final_margin*100:.1f}%
+    """
+    
+    # Risk Assessment
+    risk_level = "LOW" if irr > 25 else "MODERATE" if irr > 15 else "HIGH"
+    margin_decline = ((adjusted_margins[-1] / adjusted_margins[0]) - 1) * 100
+    
+    risks = f"""
+    ## Risk Assessment
+    The overall investment risk is assessed as **{risk_level}** based on:
+    
+    * Cost Pressure: {cost_growth_rate:.1f}% annual increase, leading to a {abs(margin_decline):.1f}% margin decline over 10 years
+    * Market Risk: Captured in the {selected_revenue} scenario
+    * Operational Risk: Reflected in {cost_scenario} scenario
+    """
+    
+    # Investment Recommendation
+    if npv > 0 and irr > 15 and payback < 7:
+        recommendation = "RECOMMENDED"
+        rationale = f"""
+        This investment opportunity appears **favorable** based on:
+        * Positive NPV of ${npv:,.0f}
+        * Strong IRR of {irr:.1f}%
+        * Reasonable payback period of {payback:.1f} years
+        """
+    elif npv > 0 and irr > 10:
+        recommendation = "CAUTIOUSLY POSITIVE"
+        rationale = f"""
+        This investment opportunity appears **viable but requires careful consideration** based on:
+        * Positive but moderate NPV of ${npv:,.0f}
+        * Acceptable IRR of {irr:.1f}%
+        * Extended payback period of {payback:.1f} years
+        """
+    else:
+        recommendation = "NOT RECOMMENDED"
+        rationale = f"""
+        This investment opportunity appears **challenging** based on:
+        * Limited NPV of ${npv:,.0f}
+        * Below-target IRR of {irr:.1f}%
+        * Long payback period of {payback:.1f} years
+        """
+    
+    conclusion = f"""
+    ## Investment Recommendation: {recommendation}
+    
+    {rationale}
+    
+    ### Key Success Factors
+    To maximize the chance of success, focus on:
+    1. Cost management to maintain margins above {adjusted_margins[-1]*100:.1f}%
+    2. Revenue growth initiatives to achieve or exceed {growth_rate:.1f}% annual growth
+    3. Operational efficiency to combat the projected {cost_growth_rate:.1f}% annual cost increases
+    """
+    
+    return overview + performance + risks + conclusion
+
+def investment_report_tab():
+    st.title('Investment Analysis Report')
+    
+    # Get current values from session state or recalculate
+    if 'current_npv' in st.session_state:
+        npv = st.session_state.current_npv
+        irr = st.session_state.current_irr
+        payback = st.session_state.current_payback
+        revenues = st.session_state.current_revenues
+        profits = st.session_state.current_profits
+        adjusted_margins = st.session_state.current_margins
+        initial_investment = st.session_state.current_investment
+        cost_growth_rate = st.session_state.current_cost_growth
+        growth_rate = st.session_state.current_growth_rate
+        selected_revenue = st.session_state.current_revenue_scenario
+        cost_scenario = st.session_state.current_cost_scenario
+        
+        # Generate and display report
+        report = generate_investment_report(
+            npv, irr, payback, initial_investment, revenues, profits, 
+            adjusted_margins, cost_growth_rate, growth_rate, 
+            selected_revenue, cost_scenario
+        )
+        
+        st.markdown(report)
+        
+        # Add download button for report
+        report_download = report.replace('##', '#').replace('*', '-')
+        st.download_button(
+            label="Download Report",
+            data=report_download,
+            file_name="franchise_investment_analysis.md",
+            mime="text/markdown"
+        )
+    else:
+        st.warning("Please complete the financial analysis first to generate the investment report.")
 
 def main():
-    tab1, tab2, tab3 = st.tabs(["Startup Costs", "Revenue Projections", "Financial Analysis"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Startup Costs", 
+        "Revenue Projections", 
+        "Financial Analysis",
+        "Investment Report"
+    ])
     
     with tab1:
         startup_costs_tab()
@@ -689,6 +830,8 @@ def main():
         revenue_projections_tab()
     with tab3:
         financial_analysis_tab()
+    with tab4:
+        investment_report_tab()
 
 if __name__ == '__main__':
     main()
