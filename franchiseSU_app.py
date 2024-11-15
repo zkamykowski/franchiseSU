@@ -45,6 +45,18 @@ def calculate_npv_metrics(initial_investment, cash_flows, discount_rate):
     
     return npv, irr, payback_period
 
+def calculate_scenario_revenues(base_revenue, scenario, growth_rate, years):
+    """Calculate revenue projections for a given scenario"""
+    if scenario == 'Weak Demand':
+        start_pct = -15
+    elif scenario == 'Above Average Demand':
+        start_pct = 15
+    else:  # Average Demand
+        start_pct = 0
+        
+    starting_revenue = base_revenue * (1 + start_pct/100)
+    return [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
+
 def startup_costs_tab():
     st.title('Startup Costs Analysis')
     
@@ -151,37 +163,19 @@ def revenue_projections_tab():
     with col2:
         if cost_scenario == 'Below Average Costs':
             default_cost_growth = 2.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=10.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 2% for Below Average scenario",
-                key='below_avg_cost_growth_rev'
-            )
         elif cost_scenario == 'Above Average Costs':
             default_cost_growth = 7.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=15.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 7% for Above Average scenario",
-                key='above_avg_cost_growth_rev'
-            )
         else:  # Average Costs
             default_cost_growth = 3.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=12.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 3% for Average scenario",
-                key='avg_cost_growth_rev'
-            )
+            
+        cost_growth_rate = st.number_input(
+            'Annual Cost Growth Rate (%)',
+            min_value=-5.0,
+            max_value=15.0,
+            value=default_cost_growth,
+            step=0.5,
+            key='cost_growth_rate_rev'
+        )
 
     # Revenue scenario selection
     col3, col4 = st.columns(2)
@@ -209,52 +203,34 @@ def revenue_projections_tab():
             step=0.5
         )
 
-    # Calculate baseline metrics with cost adjustments
+    # Calculate baseline metrics
     base_revenue = 530899
     baseline_metrics = calculate_financials(base_revenue)
     
-    # Display baseline metrics
+    # Display baseline performance
     st.header('Baseline Performance (July 2023 - June 2024)')
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Revenue Metrics**")
-        st.write(f"Gross Revenue: ${baseline_metrics['revenue']:,.2f}")
-        st.write(f"Gross Profit: ${baseline_metrics['gross_profit']:,.2f}")
+    # Revenue Metrics
+    st.subheader('Revenue Metrics')
+    st.write(f"Gross Revenue: ${base_revenue:,.2f}")
+    st.write(f"Gross Profit: ${baseline_metrics['gross_profit']:,.2f}")
     
-    with col2:
-        st.write("**Cost Metrics**")
-        st.write(f"Cost of Goods Sold: ${baseline_metrics['cogs']:,.2f} (24.43%)")
-        st.write(f"Labor Cost: ${baseline_metrics['labor']:,.2f} (31.38%)")
-        st.write(f"Occupancy Cost: ${baseline_metrics['occupancy']:,.2f} (11.50%)")
-        st.write(f"Operating Expenses: ${baseline_metrics['operating']:,.2f} (0.95%)")
-        st.write(f"Royalties: ${baseline_metrics['royalties']:,.2f} (4.00%)")
-        st.write(f"Franchise-Related: ${baseline_metrics['franchise_expense']:,.2f} (2.68%)")
-    
-    st.markdown("---")
-    
-    # Update scenario impact analysis to include cost effects
-    def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
-        cost_multiplier = (1 + cost_growth_rate/100) ** year
-        return base_margin - (base_margin * (cost_multiplier - 1))
+    # Cost Metrics
+    st.subheader('Cost Metrics')
+    for key, value in baseline_metrics.items():
+        if key not in ['revenue', 'gross_profit']:
+            st.write(f"{key.replace('_', ' ').title()}: ${value:,.2f} ({value/base_revenue*100:.2f}%)")
 
-    # Calculate projections with both revenue growth and cost effects
+    # Calculate projections
     years = range(1, 11)
-    base_margin = 0.2507  # Initial gross profit margin
+    revenues = calculate_scenario_revenues(base_revenue, selected_revenue, growth_rate, years)
     
-    if selected_revenue == 'Weak Demand':
-        start_pct = -15
-    elif selected_revenue == 'Above Average Demand':
-        start_pct = 15
-    else:
-        start_pct = 0
-        
-    starting_revenue = base_revenue * (1 + start_pct/100)
-    revenues = [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
-    adjusted_margins = [calculate_adjusted_margins(base_margin, year, cost_growth_rate) for year in years]
+    # Calculate adjusted margins based on cost scenario
+    base_margin = 0.2507  # Initial gross profit margin
+    adjusted_margins = [base_margin * (1 - (cost_growth_rate/100) * year) for year in years]
     profits = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
 
-    # Update scenario impact analysis display
+    # Display projections
     st.header('Scenario Impact Analysis')
     
     col1, col2 = st.columns(2)
@@ -272,68 +248,32 @@ def revenue_projections_tab():
         st.write(f"Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):+.1f}%")
         st.write(f"Margin Impact: {((adjusted_margins[-1]/base_margin - 1) * 100):+.1f}%")
 
-    # Add average metrics
-    st.subheader('10-Year Average')
-    avg_revenue = sum(revenues) / len(revenues)
-    avg_profit = sum(profits) / len(profits)
-    st.write(f"Revenue: ${avg_revenue:,.0f}")
-    st.write(f"Profit: ${avg_profit:,.0f}")
-    st.write(f"Monthly Revenue: ${avg_revenue/12:,.0f}")
-    st.write(f"Monthly Profit: ${avg_profit/12:,.0f}")
-    
-    # Revenue Projection Chart
-    st.markdown("---")
+    # Add projection chart
     st.header('Revenue Projection Chart')
-    
-    # Create visualization with unique key
     fig = go.Figure()
-    years = list(range(1, 11))
     
-    # Define scenarios
-    scenarios = {
-        'Weak Demand': {'growth_rate': -2.0, 'color': 'red'},
-        'Average Demand': {'growth_rate': 5.0, 'color': 'blue'},
-        'Above Average Demand': {'growth_rate': 10.0, 'color': 'green'}
-    }
+    fig.add_trace(go.Scatter(
+        x=list(years),
+        y=revenues,
+        name='Revenue',
+        line=dict(color='blue')
+    ))
     
-    # Add lines for all scenarios
-    for scenario in scenarios:
-        if scenario == selected_revenue:
-            scenario_growth = growth_rate
-        else:
-            scenario_growth = scenarios[scenario]['growth_rate']
-        
-        revenues = calculate_scenario_revenues(
-            base_revenue, 
-            scenario, 
-            scenario_growth, 
-            weak_pct, 
-            above_pct
-        )
-        
-        fig.add_trace(
-            go.Scatter(
-                x=years,
-                y=revenues,
-                name=scenario,
-                line=dict(
-                    color=scenarios[scenario]['color'],
-                    width=3 if scenario == selected_revenue else 1.5,
-                    dash='solid' if scenario == selected_revenue else 'dot'
-                )
-            )
-        )
+    fig.add_trace(go.Scatter(
+        x=list(years),
+        y=profits,
+        name='Profit',
+        line=dict(color='green')
+    ))
     
     fig.update_layout(
-        title="Revenue Projections Comparison",
+        title=f"{selected_revenue} Scenario ({growth_rate:+.1f}% Growth)",
         xaxis_title="Year",
-        yaxis_title="Revenue ($)",
-        template='plotly_white',
-        hovermode='x unified'
+        yaxis_title="Amount ($)",
+        template='plotly_white'
     )
     
-    # Add unique key to plotly chart
-    st.plotly_chart(fig, use_container_width=True, key="revenue_projection_chart")
+    st.plotly_chart(fig, use_container_width=True)
 
 def financial_analysis_tab():
     st.title('Financial Analysis')
