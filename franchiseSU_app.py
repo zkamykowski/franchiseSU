@@ -450,24 +450,21 @@ def financial_analysis_tab():
         st.metric(
             label="Net Present Value",
             value=npv_formatted,
-            delta=None,
-            key='npv_metric'
+            delta=None
         )
     with col2:
         irr_formatted = "{:.1f}%".format(irr) if irr is not None else "N/A"
         st.metric(
             label="Internal Rate of Return",
             value=irr_formatted,
-            delta=None,
-            key='irr_metric'
+            delta=None
         )
     with col3:
         payback_formatted = "{:.1f} years".format(payback) if payback is not None else "N/A"
         st.metric(
             label="Payback Period",
             value=payback_formatted,
-            delta=None,
-            key='payback_metric'
+            delta=None
         )
     
     # Add margin analysis chart
