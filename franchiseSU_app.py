@@ -71,8 +71,8 @@ def calculate_adjusted_margins(base_margin, years, cost_growth_rate):
 def startup_costs_tab():
     st.title('Startup Costs Analysis')
     
-    # Create startup costs dictionary
-    startup_costs = {
+    # Create startup costs dictionary with default values
+    default_startup_costs = {
         'Initial Franchise Fee': {'low': 35000, 'high': 35000},
         'Computer System': {'low': 5000, 'high': 8000},
         'Insurance': {'low': 5000, 'high': 7000},
@@ -94,31 +94,46 @@ def startup_costs_tab():
     # Scenario Selection
     cost_scenario = st.selectbox(
         'Select Cost Scenario',
-        ['Average Cost', 'Low Cost', 'High Cost']
+        ['Average Cost', 'Low Cost', 'High Cost'],
+        key='cost_scenario_startup'
     )
     
-    # Calculate costs based on scenario
-    if cost_scenario == 'Low Cost':
-        multiplier = 1.0
-        base_costs = {k: v['low'] for k, v in startup_costs.items()}
-    elif cost_scenario == 'High Cost':
-        multiplier = 1.0
-        base_costs = {k: v['high'] for k, v in startup_costs.items()}
-    else:  # Average Cost
-        multiplier = 1.0
-        base_costs = {k: (v['low'] + v['high'])/2 for k, v in startup_costs.items()}
+    # Initialize or reset session state for current costs when scenario changes
+    if 'current_costs' not in st.session_state or st.session_state.get('last_scenario') != cost_scenario:
+        if cost_scenario == 'Low Cost':
+            st.session_state.current_costs = {k: v['low'] for k, v in default_startup_costs.items()}
+        elif cost_scenario == 'High Cost':
+            st.session_state.current_costs = {k: v['high'] for k, v in default_startup_costs.items()}
+        else:  # Average Cost
+            st.session_state.current_costs = {k: (v['low'] + v['high'])/2 for k, v in default_startup_costs.items()}
+        st.session_state.last_scenario = cost_scenario
     
-    # Display costs breakdown
+    # Display costs breakdown with adjustable inputs
     st.header('Startup Costs Breakdown')
     
     total_cost = 0
-    for category, amount in base_costs.items():
+    for category in default_startup_costs.keys():
         col1, col2 = st.columns([3, 1])
         with col1:
             st.write(f"**{category}**")
         with col2:
-            st.write(f"${amount * multiplier:,.2f}")
-        total_cost += amount * multiplier
+            # Get min and max values for this category
+            min_val = default_startup_costs[category]['low']
+            max_val = default_startup_costs[category]['high']
+            
+            # Create number input with appropriate step size
+            step = 100 if max_val > 10000 else 50
+            current_value = st.number_input(
+                f"Amount for {category}",
+                min_value=min_val * 0.5,  # Allow going 50% below minimum
+                max_value=max_val * 1.5,  # Allow going 50% above maximum
+                value=st.session_state.current_costs[category],
+                step=step,
+                key=f"input_{category}",
+                label_visibility="collapsed"
+            )
+            st.session_state.current_costs[category] = current_value
+            total_cost += current_value
     
     st.markdown("---")
     st.header('Total Investment Required')
@@ -128,14 +143,22 @@ def startup_costs_tab():
     st.header('Cost Comparison')
     fig = go.Figure()
     
-    # Add bars for all scenarios
+    # Calculate scenario totals
     scenarios = {
-        'Low Cost': sum(v['low'] for v in startup_costs.values()),
-        'Average Cost': sum((v['low'] + v['high'])/2 for v in startup_costs.values()),
-        'High Cost': sum(v['high'] for v in startup_costs.values())
+        'Low Cost': sum(v['low'] for v in default_startup_costs.values()),
+        'Average Cost': sum((v['low'] + v['high'])/2 for v in default_startup_costs.values()),
+        'High Cost': sum(v['high'] for v in default_startup_costs.values())
     }
     
-    colors = {'Low Cost': 'green', 'Average Cost': 'blue', 'High Cost': 'red'}
+    # Add current total to scenarios
+    scenarios['Current Selection'] = total_cost
+    
+    colors = {
+        'Low Cost': 'green',
+        'Average Cost': 'blue',
+        'High Cost': 'red',
+        'Current Selection': 'purple'
+    }
     
     for scenario, amount in scenarios.items():
         fig.add_trace(
@@ -145,18 +168,21 @@ def startup_costs_tab():
                 y=[amount],
                 marker_color=colors[scenario],
                 width=0.4,
-                opacity=1 if scenario == cost_scenario else 0.7
+                opacity=1 if scenario == 'Current Selection' else 0.7
             )
         )
     
     fig.update_layout(
-        title="Investment Requirements by Scenario",
+        title="Investment Requirements Comparison",
         yaxis_title="Total Investment ($)",
         showlegend=False,
         template='plotly_white'
     )
     
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Store the current total in session state for other tabs
+    st.session_state.current_total_investment = total_cost
 
 def revenue_projections_tab():
     st.title('Revenue Projections Analysis')
@@ -363,7 +389,7 @@ def create_tornado_plot(base_params):
         'initial_investment': {'variation': 20, 'label': 'Initial Investment (±20%)'},
         'growth_rate': {'variation': 2, 'label': 'Growth Rate (±2%)'},
         'discount_rate': {'variation': 2, 'label': 'Discount Rate (±2%)'},
-        'cost_growth': {'variation': 2, 'label': 'Cost Growth Rate (±2%)'}
+        'cost_growth': {'variation': 2, 'label': 'Cost Growth Rate (��2%)'}
     }
     
     # Calculate base NPV
