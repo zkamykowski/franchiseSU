@@ -275,6 +275,96 @@ def revenue_projections_tab():
     
     st.plotly_chart(fig, use_container_width=True)
 
+def calculate_sensitivity_npv(base_params, param_name, variation_pct):
+    """Calculate NPV for parameter variations"""
+    params = base_params.copy()
+    
+    # Adjust the specified parameter up and down by variation_pct
+    if param_name == 'initial_investment':
+        params[param_name] = base_params[param_name] * (1 + variation_pct/100)
+    elif param_name == 'growth_rate':
+        params[param_name] = base_params[param_name] + variation_pct
+    elif param_name == 'discount_rate':
+        params[param_name] = base_params[param_name] + variation_pct
+    elif param_name == 'cost_growth':
+        params[param_name] = base_params[param_name] + variation_pct
+    
+    # Recalculate cash flows with new parameters
+    years = range(1, 11)
+    revenues = [params['base_revenue'] * (1 + params['growth_rate']/100) ** (year-1) for year in years]
+    adjusted_margins = [0.2507 * (1 - (params['cost_growth']/100) * year) for year in years]
+    cash_flows = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
+    
+    # Calculate NPV with new cash flows
+    full_cash_flows = [-params['initial_investment']] + cash_flows
+    return npf.npv(params['discount_rate']/100, full_cash_flows)
+
+def create_tornado_plot(base_params):
+    """Create tornado plot showing NPV sensitivity"""
+    # Parameters to vary and their ranges
+    parameters = {
+        'initial_investment': {'variation': 20, 'label': 'Initial Investment (±20%)'},
+        'growth_rate': {'variation': 2, 'label': 'Growth Rate (±2%)'},
+        'discount_rate': {'variation': 2, 'label': 'Discount Rate (±2%)'},
+        'cost_growth': {'variation': 2, 'label': 'Cost Growth Rate (±2%)'}
+    }
+    
+    # Calculate base NPV
+    base_npv = calculate_sensitivity_npv(base_params, 'initial_investment', 0)
+    
+    # Calculate NPV changes for each parameter
+    sensitivity_results = []
+    
+    for param, details in parameters.items():
+        # Calculate NPV for parameter increase and decrease
+        npv_increase = calculate_sensitivity_npv(base_params, param, details['variation'])
+        npv_decrease = calculate_sensitivity_npv(base_params, param, -details['variation'])
+        
+        # Store results
+        sensitivity_results.append({
+            'parameter': details['label'],
+            'npv_change_low': npv_decrease - base_npv,
+            'npv_change_high': npv_increase - base_npv
+        })
+    
+    # Sort results by absolute impact
+    sensitivity_results.sort(key=lambda x: max(abs(x['npv_change_low']), abs(x['npv_change_high'])))
+    
+    # Create tornado plot
+    fig = go.Figure()
+    
+    # Add bars for each parameter
+    for result in sensitivity_results:
+        fig.add_trace(go.Bar(
+            y=[result['parameter']],
+            x=[result['npv_change_high']],
+            orientation='h',
+            name='Increase',
+            marker_color='rgba(55, 128, 191, 0.7)',
+            showlegend=False
+        ))
+        
+        fig.add_trace(go.Bar(
+            y=[result['parameter']],
+            x=[result['npv_change_low']],
+            orientation='h',
+            name='Decrease',
+            marker_color='rgba(219, 64, 82, 0.7)',
+            showlegend=False
+        ))
+    
+    fig.update_layout(
+        title='NPV Sensitivity Analysis',
+        xaxis_title='Change in NPV ($)',
+        yaxis_title='Parameter',
+        barmode='overlay',
+        bargap=0.1,
+        template='plotly_white',
+        height=400
+    )
+    
+    return fig
+
 def financial_analysis_tab():
     st.title('Financial Analysis')
     
@@ -467,6 +557,31 @@ def financial_analysis_tab():
     )
     
     st.plotly_chart(fig_waterfall, use_container_width=True, key="waterfall_chart")
+    
+    # Add tornado plot after the waterfall chart
+    st.header('Sensitivity Analysis')
+    
+    # Create base parameters dictionary
+    base_params = {
+        'initial_investment': initial_investment,
+        'base_revenue': starting_revenue,
+        'growth_rate': growth_rate,
+        'discount_rate': discount_rate,
+        'cost_growth': cost_growth_rate
+    }
+    
+    # Create and display tornado plot
+    tornado_fig = create_tornado_plot(base_params)
+    st.plotly_chart(tornado_fig, use_container_width=True)
+    
+    # Add explanation
+    st.write("""
+    This tornado plot shows how changes in key input parameters affect the NPV:
+    - Bars extending to the right (blue) show the impact of increasing the parameter
+    - Bars extending to the left (red) show the impact of decreasing the parameter
+    - Longer bars indicate higher sensitivity to that parameter
+    - Parameters are sorted by their impact magnitude
+    """)
     
     # Update risk assessment
     st.header('Risk Assessment')
