@@ -569,8 +569,20 @@ def financial_analysis_tab():
             delta=None
         )
     
-    # Add margin analysis chart
+    # Margin Analysis
     st.header('Margin Analysis')
+    
+    # Add explanation before the chart
+    st.write("""
+    The Gross Margin Projection chart shows how your profit margins may evolve over time:
+    - **Blue Line**: Shows the projected gross margin after accounting for cost increases
+    - **Gray Dashed Line**: Shows the baseline gross margin of 25.07% for comparison
+    - The gap between the lines represents margin erosion due to rising costs
+    - Steeper decline indicates more significant impact from cost growth
+    - This analysis helps identify when cost management or price adjustments may be needed
+    """)
+    
+    # Margin analysis chart
     fig_margins = go.Figure()
     
     fig_margins.add_trace(go.Scatter(
@@ -594,7 +606,7 @@ def financial_analysis_tab():
         template='plotly_white'
     )
     
-    st.plotly_chart(fig_margins, use_container_width=True, key="margin_analysis_chart")
+    st.plotly_chart(fig_margins, use_container_width=True)
     
     # Update waterfall chart to show cost impact
     fig_waterfall = go.Figure()
