@@ -334,7 +334,8 @@ def financial_analysis_tab():
     with col1:
         cost_scenario = st.selectbox(
             'Select Cost Scenario',
-            ['Average Costs', 'Below Average Costs', 'Above Average Costs']
+            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
+            key='cost_scenario_select'
         )
     
     # Cost growth rate input based on scenario
@@ -347,7 +348,8 @@ def financial_analysis_tab():
                 max_value=10.0,
                 value=default_cost_growth,
                 step=0.5,
-                help="Default is 2% for Below Average scenario"
+                help="Default is 2% for Below Average scenario",
+                key='below_avg_cost_growth'
             )
         elif cost_scenario == 'Above Average Costs':
             default_cost_growth = 7.0
@@ -357,7 +359,8 @@ def financial_analysis_tab():
                 max_value=15.0,
                 value=default_cost_growth,
                 step=0.5,
-                help="Default is 7% for Above Average scenario"
+                help="Default is 7% for Above Average scenario",
+                key='above_avg_cost_growth'
             )
         else:  # Average Costs
             default_cost_growth = 3.0
@@ -367,7 +370,8 @@ def financial_analysis_tab():
                 max_value=12.0,
                 value=default_cost_growth,
                 step=0.5,
-                help="Default is 3% for Average scenario"
+                help="Default is 3% for Average scenario",
+                key='avg_cost_growth'
             )
 
     # Revenue scenario selection
@@ -375,9 +379,21 @@ def financial_analysis_tab():
     with col3:
         selected_revenue = st.selectbox(
             'Select Revenue Scenario',
-            ['Average Demand', 'Weak Demand', 'Above Average Demand']
+            ['Average Demand', 'Weak Demand', 'Above Average Demand'],
+            key='revenue_scenario_select_financial'
         )
     
+    with col4:
+        discount_rate = st.slider(
+            'Discount Rate (%)',
+            min_value=8.0,
+            max_value=20.0,
+            value=13.0,
+            step=0.5,
+            help="Industry standard for small franchise operations typically ranges from 12-15%",
+            key='discount_rate_slider'
+        )
+
     # Calculate adjusted margins based on cost growth
     def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
         cost_multiplier = (1 + cost_growth_rate/100) ** year
@@ -406,11 +422,11 @@ def financial_analysis_tab():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Net Present Value", f"${npv:,.0f}")
+        st.metric("Net Present Value", f"${npv:,.0f}", key='npv_metric')
     with col2:
-        st.metric("IRR", f"{irr:.1f}%" if irr is not None else "N/A")
+        st.metric("IRR", f"{irr:.1f}%" if irr is not None else "N/A", key='irr_metric')
     with col3:
-        st.metric("Payback Period", f"{payback:.1f} years" if payback is not None else "N/A")
+        st.metric("Payback Period", f"{payback:.1f} years" if payback is not None else "N/A", key='payback_metric')
     
     # Add margin analysis chart
     st.header('Margin Analysis')
