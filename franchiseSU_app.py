@@ -329,6 +329,13 @@ def revenue_projections_tab():
 def financial_analysis_tab():
     st.title('Financial Analysis')
     
+    # Define startup costs dictionary
+    startup_costs = {
+        'Low Cost': 417500,
+        'Average Cost': 650500,
+        'High Cost': 883500
+    }
+    
     # Cost scenario selection
     col1, col2 = st.columns(2)
     with col1:
@@ -337,6 +344,13 @@ def financial_analysis_tab():
             ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
             key='cost_scenario_select'
         )
+    
+    # Investment scenario selection
+    selected_cost = st.selectbox(
+        'Select Investment Level',
+        ['Low Cost', 'Average Cost', 'High Cost'],
+        key='investment_select'
+    )
     
     # Cost growth rate input based on scenario
     with col2:
@@ -394,6 +408,18 @@ def financial_analysis_tab():
             key='discount_rate_slider'
         )
 
+    # Define base revenue and scenario parameters
+    base_revenue = 530899
+    if selected_revenue == 'Weak Demand':
+        start_pct = -15
+        growth_rate = 0
+    elif selected_revenue == 'Above Average Demand':
+        start_pct = 15
+        growth_rate = 10
+    else:
+        start_pct = 0
+        growth_rate = 5
+
     # Calculate adjusted margins based on cost growth
     def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
         cost_multiplier = (1 + cost_growth_rate/100) ** year
@@ -402,9 +428,7 @@ def financial_analysis_tab():
 
     # Calculate cash flows with cost adjustments
     initial_investment = startup_costs[selected_cost]
-    starting_revenue = base_revenue * (1 + start_pct/100 if selected_revenue == 'Above Average Demand' 
-                                     else 1 - start_pct/100 if selected_revenue == 'Weak Demand' 
-                                     else 1)
+    starting_revenue = base_revenue * (1 + start_pct/100)
     
     years = range(1, 11)
     revenues = [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
