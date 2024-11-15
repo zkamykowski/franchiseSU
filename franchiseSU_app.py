@@ -715,7 +715,7 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     
     performance = f"""
     ## Financial Performance
-    The business is projected to grow from ${revenues[0]:,d} to ${year_10_revenue:,d} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
+    The business is projected to grow from ${revenues[0]:,.0f} to ${year_10_revenue:,.0f} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
     """
     
     # Risk Assessment
