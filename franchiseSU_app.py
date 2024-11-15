@@ -138,12 +138,83 @@ def startup_costs_tab():
 def revenue_projections_tab():
     st.title('Revenue Projections Analysis')
     
-    # Define base revenue from historical data
+    # Cost scenario selection
+    col1, col2 = st.columns(2)
+    with col1:
+        cost_scenario = st.selectbox(
+            'Select Cost Scenario',
+            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
+            key='cost_scenario_select_rev'
+        )
+    
+    # Cost growth rate input based on scenario
+    with col2:
+        if cost_scenario == 'Below Average Costs':
+            default_cost_growth = 2.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=10.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 2% for Below Average scenario",
+                key='below_avg_cost_growth_rev'
+            )
+        elif cost_scenario == 'Above Average Costs':
+            default_cost_growth = 7.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=15.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 7% for Above Average scenario",
+                key='above_avg_cost_growth_rev'
+            )
+        else:  # Average Costs
+            default_cost_growth = 3.0
+            cost_growth_rate = st.number_input(
+                'Annual Cost Growth Rate (%)',
+                min_value=-5.0,
+                max_value=12.0,
+                value=default_cost_growth,
+                step=0.5,
+                help="Default is 3% for Average scenario",
+                key='avg_cost_growth_rev'
+            )
+
+    # Revenue scenario selection
+    col3, col4 = st.columns(2)
+    with col3:
+        selected_revenue = st.selectbox(
+            'Select Revenue Scenario',
+            ['Average Demand', 'Weak Demand', 'Above Average Demand'],
+            key='revenue_scenario_select'
+        )
+    
+    with col4:
+        # Adjust default growth rate based on scenario
+        if selected_revenue == 'Weak Demand':
+            default_growth = 1.0  # Changed from 0 to 1%
+        elif selected_revenue == 'Above Average Demand':
+            default_growth = 10.0
+        else:
+            default_growth = 5.0
+            
+        growth_rate = st.slider(
+            'Annual Growth Rate (%)',
+            min_value=-2.0,
+            max_value=15.0,
+            value=default_growth,
+            step=0.5
+        )
+
+    # Calculate baseline metrics with cost adjustments
     base_revenue = 530899
+    baseline_metrics = calculate_financials(base_revenue)
     
     # Display baseline metrics
     st.header('Baseline Performance (July 2023 - June 2024)')
-    baseline_metrics = calculate_financials(base_revenue)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -162,115 +233,53 @@ def revenue_projections_tab():
     
     st.markdown("---")
     
-    # Scenario Selection
-    selected_scenario = st.selectbox(
-        'Select Revenue Scenario',
-        ['Average Demand', 'Weak Demand', 'Above Average Demand']
-    )
-    
-    # Get scenario-specific inputs
-    if selected_scenario == 'Weak Demand':
-        weak_pct = st.number_input(
-            'Starting Revenue (% Below Baseline)',
-            min_value=0.0,
-            max_value=50.0,
-            value=15.0,
-            step=1.0
-        )
-        above_pct = 15.0  # Default for comparison
-        growth_rate = st.number_input(
-            'Annual Growth Rate (%)',
-            min_value=-20.0,
-            max_value=5.0,
-            value=0.0,
-            step=0.5
-        )
-    elif selected_scenario == 'Above Average Demand':
-        weak_pct = 15.0  # Default for comparison
-        above_pct = st.number_input(
-            'Starting Revenue (% Above Baseline)',
-            min_value=0.0,
-            max_value=50.0,
-            value=15.0,
-            step=1.0
-        )
-        growth_rate = st.number_input(
-            'Annual Growth Rate (%)',
-            min_value=5.0,
-            max_value=30.0,
-            value=10.0,
-            step=0.5
-        )
-    else:  # Average Demand
-        weak_pct = 15.0  # Default for comparison
-        above_pct = 15.0  # Default for comparison
-        growth_rate = st.number_input(
-            'Annual Growth Rate (%)',
-            min_value=0.0,
-            max_value=10.0,
-            value=5.0,
-            step=0.5
-        )
+    # Update scenario impact analysis to include cost effects
+    def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
+        cost_multiplier = (1 + cost_growth_rate/100) ** year
+        return base_margin - (base_margin * (cost_multiplier - 1))
 
-    # Calculate scenario revenues
-    def calculate_scenario_revenues(base_revenue, scenario_type, growth_rate, weak_pct=15, above_pct=15):
-        if scenario_type == 'Weak Demand':
-            starting_revenue = base_revenue * (1 - weak_pct/100)
-        elif scenario_type == 'Above Average Demand':
-            starting_revenue = base_revenue * (1 + above_pct/100)
-        else:
-            starting_revenue = base_revenue
+    # Calculate projections with both revenue growth and cost effects
+    years = range(1, 11)
+    base_margin = 0.2507  # Initial gross profit margin
+    
+    if selected_revenue == 'Weak Demand':
+        start_pct = -15
+    elif selected_revenue == 'Above Average Demand':
+        start_pct = 15
+    else:
+        start_pct = 0
         
-        growth_decimal = growth_rate / 100
-        return [starting_revenue * (1 + growth_decimal) ** year for year in range(10)]
+    starting_revenue = base_revenue * (1 + start_pct/100)
+    revenues = [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
+    adjusted_margins = [calculate_adjusted_margins(base_margin, year, cost_growth_rate) for year in years]
+    profits = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
 
-    # Calculate revenues and profits for selected scenario
-    selected_revenues = calculate_scenario_revenues(
-        base_revenue, 
-        selected_scenario, 
-        growth_rate, 
-        weak_pct, 
-        above_pct
-    )
-    
-    # Calculate key metrics
-    year1_revenue = selected_revenues[0]
-    year10_revenue = selected_revenues[-1]
-    avg_revenue = sum(selected_revenues) / len(selected_revenues)
-    
-    year1_profit = year1_revenue * 0.2507
-    year10_profit = year10_revenue * 0.2507
-    avg_profit = avg_revenue * 0.2507
-    
-    # Display Scenario Impact Analysis
-    st.markdown("---")
+    # Update scenario impact analysis display
     st.header('Scenario Impact Analysis')
     
-    col1, col2, col3 = st.columns(3)
-    
+    col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Year 1")
-        st.write(f"Revenue: **${year1_revenue:,.0f}**")
-        st.write(f"Profit: **${year1_profit:,.0f}**")
-        rev_change = ((year1_revenue - base_revenue) / base_revenue) * 100
-        profit_change = ((year1_profit - (base_revenue * 0.2507)) / (base_revenue * 0.2507)) * 100
-        st.write(f"Revenue Change: **{rev_change:+.1f}%**")
-        st.write(f"Profit Change: **{profit_change:+.1f}%**")
-    
+        st.subheader('Year 1')
+        st.write(f"Revenue: ${revenues[0]:,.0f}")
+        st.write(f"Profit: ${profits[0]:,.0f}")
+        st.write(f"Revenue Change: {((revenues[0]/base_revenue - 1) * 100):+.1f}%")
+        st.write(f"Profit Change: {((profits[0]/baseline_metrics['gross_profit'] - 1) * 100):+.1f}%")
+        
     with col2:
-        st.subheader("Year 10")
-        st.write(f"Revenue: **${year10_revenue:,.0f}**")
-        st.write(f"Profit: **${year10_profit:,.0f}**")
-        total_rev_growth = ((year10_revenue - year1_revenue) / year1_revenue) * 100
-        st.write(f"Total Growth: **{total_rev_growth:+.1f}%**")
-        st.write(f"Avg Annual Growth: **{growth_rate:+.1f}%**")
-    
-    with col3:
-        st.subheader("10-Year Average")
-        st.write(f"Revenue: **${avg_revenue:,.0f}**")
-        st.write(f"Profit: **${avg_profit:,.0f}**")
-        st.write(f"Monthly Revenue: **${avg_revenue/12:,.0f}**")
-        st.write(f"Monthly Profit: **${avg_profit/12:,.0f}**")
+        st.subheader('Year 10')
+        st.write(f"Revenue: ${revenues[-1]:,.0f}")
+        st.write(f"Profit: ${profits[-1]:,.0f}")
+        st.write(f"Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):+.1f}%")
+        st.write(f"Margin Impact: {((adjusted_margins[-1]/base_margin - 1) * 100):+.1f}%")
+
+    # Add average metrics
+    st.subheader('10-Year Average')
+    avg_revenue = sum(revenues) / len(revenues)
+    avg_profit = sum(profits) / len(profits)
+    st.write(f"Revenue: ${avg_revenue:,.0f}")
+    st.write(f"Profit: ${avg_profit:,.0f}")
+    st.write(f"Monthly Revenue: ${avg_revenue/12:,.0f}")
+    st.write(f"Monthly Profit: ${avg_profit/12:,.0f}")
     
     # Revenue Projection Chart
     st.markdown("---")
@@ -289,7 +298,7 @@ def revenue_projections_tab():
     
     # Add lines for all scenarios
     for scenario in scenarios:
-        if scenario == selected_scenario:
+        if scenario == selected_revenue:
             scenario_growth = growth_rate
         else:
             scenario_growth = scenarios[scenario]['growth_rate']
@@ -309,8 +318,8 @@ def revenue_projections_tab():
                 name=scenario,
                 line=dict(
                     color=scenarios[scenario]['color'],
-                    width=3 if scenario == selected_scenario else 1.5,
-                    dash='solid' if scenario == selected_scenario else 'dot'
+                    width=3 if scenario == selected_revenue else 1.5,
+                    dash='solid' if scenario == selected_revenue else 'dot'
                 )
             )
         )
