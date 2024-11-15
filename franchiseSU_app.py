@@ -446,21 +446,27 @@ def financial_analysis_tab():
     col1, col2, col3 = st.columns(3)
     
     with col1:
+        npv_formatted = "${:,.0f}".format(npv) if npv is not None else "N/A"
         st.metric(
             label="Net Present Value",
-            value=f"${npv:,.0f}",
+            value=npv_formatted,
+            delta=None,
             key='npv_metric'
         )
     with col2:
+        irr_formatted = "{:.1f}%".format(irr) if irr is not None else "N/A"
         st.metric(
-            label="IRR",
-            value=f"{irr:.1f}%" if irr is not None else "N/A",
+            label="Internal Rate of Return",
+            value=irr_formatted,
+            delta=None,
             key='irr_metric'
         )
     with col3:
+        payback_formatted = "{:.1f} years".format(payback) if payback is not None else "N/A"
         st.metric(
             label="Payback Period",
-            value=f"{payback:.1f} years" if payback is not None else "N/A",
+            value=payback_formatted,
+            delta=None,
             key='payback_metric'
         )
     
