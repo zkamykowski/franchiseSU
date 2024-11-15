@@ -74,75 +74,61 @@ def calculate_adjusted_margins(base_margin, years, cost_growth_rate):
 def startup_costs_tab():
     st.title('Startup Costs Analysis')
     
-    # Create startup costs dictionary with default values
+    # Create startup costs dictionary with default values (all as float)
     default_startup_costs = {
-        'Initial Franchise Fee': {'low': 35000, 'high': 35000},
-        'Computer System': {'low': 5000, 'high': 8000},
-        'Insurance': {'low': 5000, 'high': 7000},
-        'Professional Fees': {'low': 5000, 'high': 7500},
-        'Travel, Lodging, and Meals': {'low': 2000, 'high': 8000},
-        'Equipment': {'low': 100000, 'high': 160000},
-        'Construction and Leasehold Improvements': {'low': 200000, 'high': 460000},
-        'Signage': {'low': 6000, 'high': 20000},
-        'Permits and Licenses': {'low': 500, 'high': 5000},
-        'Project Management & Architect Fees': {'low': 10000, 'high': 35000},
-        'Office Equipment and Supplies': {'low': 500, 'high': 1000},
-        'Initial Inventory': {'low': 8000, 'high': 12000},
-        'Utilities Lease and Security Deposits': {'low': 4500, 'high': 30000},
-        'Grand Opening and Initial Advertising': {'low': 5000, 'high': 10000},
-        'Pre-opening Employee Wages': {'low': 1000, 'high': 5000},
-        'Additional Funds (3 Months)': {'low': 40000, 'high': 80000}
+        'Initial Franchise Fee': {'low': 35000.0, 'high': 35000.0},
+        'Computer System': {'low': 5000.0, 'high': 8000.0},
+        'Insurance': {'low': 5000.0, 'high': 7000.0},
+        'Professional Fees': {'low': 5000.0, 'high': 7500.0},
+        'Travel, Lodging, and Meals': {'low': 2000.0, 'high': 8000.0},
+        'Equipment': {'low': 100000.0, 'high': 160000.0},
+        'Construction and Leasehold Improvements': {'low': 200000.0, 'high': 460000.0},
+        'Signage': {'low': 6000.0, 'high': 20000.0},
+        'Permits and Licenses': {'low': 500.0, 'high': 5000.0},
+        'Project Management & Architect Fees': {'low': 10000.0, 'high': 35000.0},
+        'Office Equipment and Supplies': {'low': 500.0, 'high': 1000.0},
+        'Initial Inventory': {'low': 8000.0, 'high': 12000.0},
+        'Utilities Lease and Security Deposits': {'low': 4500.0, 'high': 30000.0},
+        'Grand Opening and Initial Advertising': {'low': 5000.0, 'high': 10000.0},
+        'Pre-opening Employee Wages': {'low': 1000.0, 'high': 5000.0},
+        'Additional Funds (3 Months)': {'low': 40000.0, 'high': 80000.0}
     }
-    
-    # Calculate scenario totals for use in other tabs
-    st.session_state.startup_costs = {
-        'Low Cost': sum(v['low'] for v in default_startup_costs.values()),
-        'Average Cost': sum((v['low'] + v['high'])/2 for v in default_startup_costs.values()),
-        'High Cost': sum(v['high'] for v in default_startup_costs.values())
-    }
-    
-    # Scenario Selection
-    cost_scenario = st.selectbox(
-        'Select Cost Scenario',
-        ['Average Cost', 'Low Cost', 'High Cost'],
-        key='cost_scenario_startup'
-    )
     
     # Initialize or reset session state for current costs when scenario changes
     if 'current_costs' not in st.session_state or st.session_state.get('last_scenario') != cost_scenario:
         if cost_scenario == 'Low Cost':
-            st.session_state.current_costs = {k: v['low'] for k, v in default_startup_costs.items()}
+            st.session_state.current_costs = {k: float(v['low']) for k, v in default_startup_costs.items()}
         elif cost_scenario == 'High Cost':
-            st.session_state.current_costs = {k: v['high'] for k, v in default_startup_costs.items()}
+            st.session_state.current_costs = {k: float(v['high']) for k, v in default_startup_costs.items()}
         else:  # Average Cost
-            st.session_state.current_costs = {k: (v['low'] + v['high'])/2 for k, v in default_startup_costs.items()}
+            st.session_state.current_costs = {k: float((v['low'] + v['high'])/2) for k, v in default_startup_costs.items()}
         st.session_state.last_scenario = cost_scenario
     
     # Display costs breakdown with adjustable inputs
     st.header('Startup Costs Breakdown')
     
-    total_cost = 0
+    total_cost = 0.0  # Initialize as float
     for category in default_startup_costs.keys():
         col1, col2 = st.columns([3, 1])
         with col1:
             st.write(f"**{category}**")
         with col2:
             # Get min and max values for this category
-            min_val = default_startup_costs[category]['low']
-            max_val = default_startup_costs[category]['high']
+            min_val = float(default_startup_costs[category]['low'])
+            max_val = float(default_startup_costs[category]['high'])
             
             # Create number input with appropriate step size
-            step = 100.0 if max_val > 10000 else 50.0
+            step = 100.0 if max_val > 10000.0 else 50.0
             current_value = st.number_input(
                 f"Amount for {category}",
-                min_value=min_val * 0.5,  # Allow going 50% below minimum
-                max_value=max_val * 1.5,  # Allow going 50% above maximum
-                value=st.session_state.current_costs[category],
+                min_value=float(min_val * 0.5),  # Convert to float
+                max_value=float(max_val * 1.5),  # Convert to float
+                value=float(st.session_state.current_costs[category]),  # Convert to float
                 step=step,
                 key=f"input_{category}",
                 label_visibility="collapsed"
             )
-            st.session_state.current_costs[category] = current_value
+            st.session_state.current_costs[category] = float(current_value)
             total_cost += current_value
     
     st.markdown("---")
