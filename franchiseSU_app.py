@@ -435,7 +435,7 @@ def financial_analysis_tab():
         xaxis_title="Year",
         yaxis_title="Gross Margin (%)",
         template='plotly_white'
-    ))
+    )
     
     st.plotly_chart(fig_margins, use_container_width=True, key="margin_analysis_chart")
     
