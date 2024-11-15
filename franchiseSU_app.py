@@ -716,10 +716,10 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     start_amount = f"${revenues[0]:,.0f}"
     end_amount = f"${revenues[-1]:,.0f}"
     
-    performance = "\n".join([
-        "## Financial Performance",
-        f"The business is projected to grow from {start_amount} to {end_amount} in Year 10, with an annual growth rate of {growth_rate:.1f}%."
-    ])
+    performance = f"""
+    ## Financial Performance
+    The business is projected to grow from ${revenues[0]:,.0f} to ${revenues[-1]:,.0f} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
+    """
     
     # Risk Assessment
     risk_level = "LOW" if irr > 25 else "MODERATE" if irr > 15 else "HIGH"
