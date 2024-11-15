@@ -94,6 +94,20 @@ def startup_costs_tab():
         'Additional Funds (3 Months)': {'low': 40000.0, 'high': 80000.0}
     }
     
+    # Scenario Selection
+    cost_scenario = st.selectbox(
+        'Select Cost Scenario',
+        ['Average Cost', 'Low Cost', 'High Cost'],
+        key='cost_scenario_select'
+    )
+    
+    # Calculate scenario totals for use in other tabs
+    st.session_state.startup_costs = {
+        'Low Cost': sum(v['low'] for v in default_startup_costs.values()),
+        'Average Cost': sum((v['low'] + v['high'])/2 for v in default_startup_costs.values()),
+        'High Cost': sum(v['high'] for v in default_startup_costs.values())
+    }
+    
     # Initialize or reset session state for current costs when scenario changes
     if 'current_costs' not in st.session_state or st.session_state.get('last_scenario') != cost_scenario:
         if cost_scenario == 'Low Cost':
