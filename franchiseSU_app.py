@@ -425,84 +425,86 @@ def create_tornado_plot(base_params):
 def financial_analysis_tab():
     st.title('Financial Analysis')
     
-    # Define startup costs dictionary
-    startup_costs = {
-        'Low Cost': 417500,
-        'Average Cost': 650500,
-        'High Cost': 883500
-    }
-    
-    # Cost scenario selection
-    col1, col2 = st.columns(2)
-    with col1:
-        cost_scenario = st.selectbox(
-            'Select Cost Scenario',
-            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
-            key='cost_scenario_select'
-        )
-    
-    # Investment scenario selection
+    # Initial Investment Section
+    st.header('Initial Investment')
     selected_cost = st.selectbox(
         'Select Investment Level',
-        ['Low Cost', 'Average Cost', 'High Cost'],
-        key='investment_select'
+        ['Average Cost', 'Low Cost', 'High Cost'],
+        index=0,  # Default to Average Cost
+        key='startup_cost_select'
     )
     
-    # Cost growth rate input based on scenario
-    with col2:
-        if cost_scenario == 'Below Average Costs':
-            default_cost_growth = 2.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=10.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 2% for Below Average scenario",
-                key='below_avg_cost_growth'
-            )
-        elif cost_scenario == 'Above Average Costs':
-            default_cost_growth = 7.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=15.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 7% for Above Average scenario",
-                key='above_avg_cost_growth'
-            )
-        else:  # Average Costs
-            default_cost_growth = 3.0
-            cost_growth_rate = st.number_input(
-                'Annual Cost Growth Rate (%)',
-                min_value=-5.0,
-                max_value=12.0,
-                value=default_cost_growth,
-                step=0.5,
-                help="Default is 3% for Average scenario",
-                key='avg_cost_growth'
-            )
-
-    # Revenue scenario selection
-    col3, col4 = st.columns(2)
-    with col3:
+    # Display the selected investment amount
+    initial_investment = startup_costs[selected_cost]
+    st.write(f"Initial Investment: **${initial_investment:,.0f}**")
+    
+    # Business Scenario Section
+    st.header('Business Scenario Analysis')
+    
+    # Revenue controls
+    col1, col2 = st.columns(2)
+    with col1:
         selected_revenue = st.selectbox(
             'Select Revenue Scenario',
             ['Average Demand', 'Weak Demand', 'Above Average Demand'],
-            key='revenue_scenario_select_financial'
+            index=0,  # Default to Average Demand
+            key='revenue_scenario_select_fin'
+        )
+    
+    with col2:
+        # Industry standard default growth rates
+        if selected_revenue == 'Weak Demand':
+            default_growth = 3.0  # Conservative growth
+        elif selected_revenue == 'Above Average Demand':
+            default_growth = 12.0  # High growth
+        else:
+            default_growth = 7.0  # Industry average
+            
+        growth_rate = st.number_input(
+            'Annual Revenue Growth Rate (%)',
+            min_value=-2.0,
+            max_value=20.0,
+            value=default_growth,
+            step=0.5,
+            help="Industry standard growth rates: Weak=3%, Average=7%, Above Average=12%"
+        )
+    
+    # Cost controls
+    col3, col4 = st.columns(2)
+    with col3:
+        cost_scenario = st.selectbox(
+            'Select Cost Scenario',
+            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
+            index=0,  # Default to Average Costs
+            key='cost_scenario_select_fin'
         )
     
     with col4:
-        discount_rate = st.slider(
-            'Discount Rate (%)',
-            min_value=8.0,
-            max_value=20.0,
-            value=13.0,
-            step=0.5,
-            help="Industry standard for small franchise operations typically ranges from 12-15%",
-            key='discount_rate_slider'
+        if cost_scenario == 'Below Average Costs':
+            default_cost_growth = 2.0
+        elif cost_scenario == 'Above Average Costs':
+            default_cost_growth = 7.0
+        else:
+            default_cost_growth = 3.0
+            
+        cost_growth_rate = st.number_input(
+            'Annual Cost Growth Rate (%)',
+            min_value=-5.0,
+            max_value=15.0,
+            value=default_cost_growth,
+            step=0.5
         )
+    
+    # Discount Rate (in its own section)
+    st.header('Valuation Parameters')
+    discount_rate = st.slider(
+        'Discount Rate (%)',
+        min_value=8.0,
+        max_value=20.0,
+        value=13.0,
+        step=0.5,
+        help="Standard range: 10-15% for small businesses"
+    )
 
     # Define base revenue and scenario parameters
     base_revenue = 530899
