@@ -713,10 +713,10 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     avg_profit = sum(profits) / len(profits)
     final_margin = adjusted_margins[-1]
     
-    performance = """
+    performance = f"""
     ## Financial Performance
-    The business is projected to grow from $%d to $%d in Year 10, with an annual growth rate of %.1f%%.
-    """ % (revenues[0], year_10_revenue, growth_rate)
+    The business is projected to grow from ${revenues[0]:,} to ${year_10_revenue:,} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
+    """
     
     # Risk Assessment
     risk_level = "LOW" if irr > 25 else "MODERATE" if irr > 15 else "HIGH"
