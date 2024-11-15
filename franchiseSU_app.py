@@ -150,46 +150,19 @@ def startup_costs_tab():
 def revenue_projections_tab():
     st.title('Revenue Projections Analysis')
     
-    # Cost scenario selection
+    # Input controls in two rows of two columns
     col1, col2 = st.columns(2)
     with col1:
-        cost_scenario = st.selectbox(
-            'Select Cost Scenario',
-            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
-            key='cost_scenario_select_rev'
-        )
-    
-    # Cost growth rate input based on scenario
-    with col2:
-        if cost_scenario == 'Below Average Costs':
-            default_cost_growth = 2.0
-        elif cost_scenario == 'Above Average Costs':
-            default_cost_growth = 7.0
-        else:  # Average Costs
-            default_cost_growth = 3.0
-            
-        cost_growth_rate = st.number_input(
-            'Annual Cost Growth Rate (%)',
-            min_value=-5.0,
-            max_value=15.0,
-            value=default_cost_growth,
-            step=0.5,
-            key='cost_growth_rate_rev'
-        )
-
-    # Revenue scenario selection
-    col3, col4 = st.columns(2)
-    with col3:
         selected_revenue = st.selectbox(
             'Select Revenue Scenario',
             ['Average Demand', 'Weak Demand', 'Above Average Demand'],
             key='revenue_scenario_select'
         )
     
-    with col4:
+    with col2:
         # Adjust default growth rate based on scenario
         if selected_revenue == 'Weak Demand':
-            default_growth = 1.0  # Changed from 0 to 1%
+            default_growth = 1.0
         elif selected_revenue == 'Above Average Demand':
             default_growth = 10.0
         else:
@@ -202,54 +175,42 @@ def revenue_projections_tab():
             value=default_growth,
             step=0.5
         )
-
-    # Calculate baseline metrics
-    base_revenue = 530899
-    baseline_metrics = calculate_financials(base_revenue)
     
-    # Display baseline performance
-    st.header('Baseline Performance (July 2023 - June 2024)')
+    col3, col4 = st.columns(2)
+    with col3:
+        cost_scenario = st.selectbox(
+            'Select Cost Scenario',
+            ['Average Costs', 'Below Average Costs', 'Above Average Costs'],
+            key='cost_scenario_select_rev'
+        )
     
-    # Revenue Metrics
-    st.subheader('Revenue Metrics')
-    st.write(f"Gross Revenue: ${base_revenue:,.2f}")
-    st.write(f"Gross Profit: ${baseline_metrics['gross_profit']:,.2f}")
-    
-    # Cost Metrics
-    st.subheader('Cost Metrics')
-    for key, value in baseline_metrics.items():
-        if key not in ['revenue', 'gross_profit']:
-            st.write(f"{key.replace('_', ' ').title()}: ${value:,.2f} ({value/base_revenue*100:.2f}%)")
+    with col4:
+        if cost_scenario == 'Below Average Costs':
+            default_cost_growth = 2.0
+        elif cost_scenario == 'Above Average Costs':
+            default_cost_growth = 7.0
+        else:
+            default_cost_growth = 3.0
+            
+        cost_growth_rate = st.number_input(
+            'Annual Cost Growth Rate (%)',
+            min_value=-5.0,
+            max_value=15.0,
+            value=default_cost_growth,
+            step=0.5,
+            key='cost_growth_rate_rev'
+        )
 
     # Calculate projections
+    base_revenue = 530899
     years = range(1, 11)
     revenues = calculate_scenario_revenues(base_revenue, selected_revenue, growth_rate, years)
-    
-    # Calculate adjusted margins based on cost scenario
-    base_margin = 0.2507  # Initial gross profit margin
+    base_margin = 0.2507
     adjusted_margins = [base_margin * (1 - (cost_growth_rate/100) * year) for year in years]
     profits = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
 
-    # Display projections
-    st.header('Scenario Impact Analysis')
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader('Year 1')
-        st.write(f"Revenue: ${revenues[0]:,.0f}")
-        st.write(f"Profit: ${profits[0]:,.0f}")
-        st.write(f"Revenue Change: {((revenues[0]/base_revenue - 1) * 100):+.1f}%")
-        st.write(f"Profit Change: {((profits[0]/baseline_metrics['gross_profit'] - 1) * 100):+.1f}%")
-        
-    with col2:
-        st.subheader('Year 10')
-        st.write(f"Revenue: ${revenues[-1]:,.0f}")
-        st.write(f"Profit: ${profits[-1]:,.0f}")
-        st.write(f"Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):+.1f}%")
-        st.write(f"Margin Impact: {((adjusted_margins[-1]/base_margin - 1) * 100):+.1f}%")
-
-    # Add projection chart
-    st.header('Revenue Projection Chart')
+    # Display projection chart first
+    st.header('Revenue and Profit Projections')
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
@@ -274,6 +235,52 @@ def revenue_projections_tab():
     )
     
     st.plotly_chart(fig, use_container_width=True)
+
+    # Scenario Impact Analysis with three columns
+    st.header('Scenario Impact Analysis')
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader('Year 1')
+        st.write(f"Revenue: ${revenues[0]:,.0f}")
+        st.write(f"Profit: ${profits[0]:,.0f}")
+        st.write(f"Revenue Change: {((revenues[0]/base_revenue - 1) * 100):+.1f}%")
+        st.write(f"Profit Change: {((profits[0]/(base_revenue * base_margin) - 1) * 100):+.1f}%")
+        
+    with col2:
+        st.subheader('Year 10')
+        st.write(f"Revenue: ${revenues[-1]:,.0f}")
+        st.write(f"Profit: ${profits[-1]:,.0f}")
+        st.write(f"Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):+.1f}%")
+        st.write(f"Margin Impact: {((adjusted_margins[-1]/base_margin - 1) * 100):+.1f}%")
+    
+    with col3:
+        st.subheader('10-Year Average')
+        avg_revenue = sum(revenues) / len(revenues)
+        avg_profit = sum(profits) / len(profits)
+        avg_margin = avg_profit / avg_revenue
+        st.write(f"Revenue: ${avg_revenue:,.0f}")
+        st.write(f"Profit: ${avg_profit:,.0f}")
+        st.write(f"Monthly Revenue: ${avg_revenue/12:,.0f}")
+        st.write(f"Average Margin: {(avg_margin * 100):.1f}%")
+
+    # Move baseline metrics to the bottom
+    st.header('Baseline Performance (July 2023 - June 2024)')
+    
+    col4, col5 = st.columns(2)
+    
+    with col4:
+        st.subheader('Revenue Metrics')
+        baseline_metrics = calculate_financials(base_revenue)
+        st.write(f"Gross Revenue: ${base_revenue:,.2f}")
+        st.write(f"Gross Profit: ${baseline_metrics['gross_profit']:,.2f}")
+    
+    with col5:
+        st.subheader('Cost Metrics')
+        for key, value in baseline_metrics.items():
+            if key not in ['revenue', 'gross_profit']:
+                st.write(f"{key.replace('_', ' ').title()}: ${value:,.2f} ({value/base_revenue*100:.2f}%)")
 
 def calculate_sensitivity_npv(base_params, param_name, variation_pct):
     """Calculate NPV for parameter variations"""
