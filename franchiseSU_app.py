@@ -446,11 +446,23 @@ def financial_analysis_tab():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Net Present Value", f"${npv:,.0f}", key='npv_metric')
+        st.metric(
+            label="Net Present Value",
+            value=f"${npv:,.0f}",
+            key='npv_metric'
+        )
     with col2:
-        st.metric("IRR", f"{irr:.1f}%" if irr is not None else "N/A", key='irr_metric')
+        st.metric(
+            label="IRR",
+            value=f"{irr:.1f}%" if irr is not None else "N/A",
+            key='irr_metric'
+        )
     with col3:
-        st.metric("Payback Period", f"{payback:.1f} years" if payback is not None else "N/A", key='payback_metric')
+        st.metric(
+            label="Payback Period",
+            value=f"{payback:.1f} years" if payback is not None else "N/A",
+            key='payback_metric'
+        )
     
     # Add margin analysis chart
     st.header('Margin Analysis')
