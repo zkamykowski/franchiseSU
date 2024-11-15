@@ -785,27 +785,25 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     return overview + performance + risks + conclusion
 
 class PDF(FPDF):
+    def __init__(self):
+        super().__init__('P', 'mm', 'Letter')  # Use Letter size paper
+        self.set_margins(15, 15, 15)  # Set margins
+    
     def header(self):
-        # Add logo or header if desired
-        self.set_font('Arial', 'B', 15)
-        self.cell(0, 10, 'Franchise Investment Analysis Report', 0, 1, 'C')
-        self.ln(10)
+        self.set_font('Helvetica', 'B', 15)
+        self.cell(0, 10, 'Franchise Investment Analysis Report', align='C')
+        self.ln(15)
     
     def footer(self):
         self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', align='C')
 
 def create_pdf_report(report_content):
     """Convert markdown report to PDF format"""
     pdf = PDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Format title
-    pdf.set_font('Arial', 'B', 16)
-    pdf.cell(0, 10, 'Investment Analysis Report', ln=True)
-    pdf.ln(10)
+    pdf.set_auto_page_break(True, margin=15)
     
     # Format sections
     sections = report_content.split('##')
@@ -814,20 +812,56 @@ def create_pdf_report(report_content):
         title = section.split('\n')[0].strip()
         content = '\n'.join(section.split('\n')[1:]).strip()
         
-        pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, title, ln=True)
-        pdf.ln(5)
+        # Add section title
+        pdf.set_font('Helvetica', 'B', 14)
+        pdf.cell(0, 10, title, align='L')
+        pdf.ln(15)
         
-        # Section content
-        pdf.set_font('Arial', '', 12)
-        # Handle bullet points
+        # Add section content
+        pdf.set_font('Helvetica', '', 11)
+        
+        # Process content line by line
         for line in content.split('\n'):
-            if line.strip().startswith('*'):
-                pdf.cell(10)  # Indent
-                pdf.multi_cell(0, 10, '• ' + line.strip('* '))
+            line = line.strip()
+            if not line:  # Skip empty lines
+                pdf.ln(5)
+                continue
+                
+            if line.startswith('*'):
+                # Handle bullet points
+                pdf.set_x(25)  # Indent
+                text = '• ' + line.strip('* ')
+                # Split long lines
+                words = text.split()
+                line = ''
+                for word in words:
+                    if pdf.get_string_width(line + ' ' + word) < pdf.w - 40:
+                        line += ' ' + word if line else word
+                    else:
+                        pdf.cell(0, 7, line, align='L')
+                        pdf.ln()
+                        pdf.set_x(25)
+                        line = word
+                if line:
+                    pdf.cell(0, 7, line, align='L')
+                pdf.ln(7)
             else:
-                pdf.multi_cell(0, 10, line.strip())
-        pdf.ln(5)
+                # Regular text
+                # Split long lines
+                words = line.split()
+                line = ''
+                for word in words:
+                    if pdf.get_string_width(line + ' ' + word) < pdf.w - 30:
+                        line += ' ' + word if line else word
+                    else:
+                        pdf.cell(0, 7, line, align='L')
+                        pdf.ln()
+                        line = word
+                if line:
+                    pdf.cell(0, 7, line, align='L')
+                pdf.ln(7)
+            
+        pdf.ln(10)
     
     return pdf
 
@@ -858,21 +892,25 @@ def investment_report_tab():
         st.markdown(report)
         
         # Create PDF
-        pdf = create_pdf_report(report)
-        
-        # Save PDF to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            pdf.output(tmp_file.name)
+        try:
+            pdf = create_pdf_report(report)
             
-            # Add download button
-            with open(tmp_file.name, 'rb') as pdf_file:
-                pdf_bytes = pdf_file.read()
-                st.download_button(
-                    label="Download PDF Report",
-                    data=pdf_bytes,
-                    file_name="franchise_investment_analysis.pdf",
-                    mime="application/pdf"
-                )
+            # Save PDF to temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                pdf.output(tmp_file.name)
+                
+                # Add download button
+                with open(tmp_file.name, 'rb') as pdf_file:
+                    pdf_bytes = pdf_file.read()
+                    st.download_button(
+                        label="Download PDF Report",
+                        data=pdf_bytes,
+                        file_name="franchise_investment_analysis.pdf",
+                        mime="application/pdf"
+                    )
+        except Exception as e:
+            st.error(f"Error generating PDF: {str(e)}")
+            
     else:
         st.warning("Please complete the financial analysis first to generate the investment report.")
 
