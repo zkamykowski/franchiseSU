@@ -2,6 +2,9 @@ import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
 import numpy_financial as npf
+import fpdf
+from fpdf import FPDF
+import tempfile
 
 def calculate_financials(revenue):
     """Calculate all financial metrics based on baseline percentages"""
@@ -781,10 +784,56 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     
     return overview + performance + risks + conclusion
 
+class PDF(FPDF):
+    def header(self):
+        # Add logo or header if desired
+        self.set_font('Arial', 'B', 15)
+        self.cell(0, 10, 'Franchise Investment Analysis Report', 0, 1, 'C')
+        self.ln(10)
+    
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+def create_pdf_report(report_content):
+    """Convert markdown report to PDF format"""
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Format title
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, 'Investment Analysis Report', ln=True)
+    pdf.ln(10)
+    
+    # Format sections
+    sections = report_content.split('##')
+    for section in sections[1:]:  # Skip first empty section
+        # Section title
+        title = section.split('\n')[0].strip()
+        content = '\n'.join(section.split('\n')[1:]).strip()
+        
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, title, ln=True)
+        pdf.ln(5)
+        
+        # Section content
+        pdf.set_font('Arial', '', 12)
+        # Handle bullet points
+        for line in content.split('\n'):
+            if line.strip().startswith('*'):
+                pdf.cell(10)  # Indent
+                pdf.multi_cell(0, 10, '• ' + line.strip('* '))
+            else:
+                pdf.multi_cell(0, 10, line.strip())
+        pdf.ln(5)
+    
+    return pdf
+
 def investment_report_tab():
     st.title('Investment Analysis Report')
     
-    # Get current values from session state or recalculate
     if 'current_npv' in st.session_state:
         npv = st.session_state.current_npv
         irr = st.session_state.current_irr
@@ -798,23 +847,32 @@ def investment_report_tab():
         selected_revenue = st.session_state.current_revenue_scenario
         cost_scenario = st.session_state.current_cost_scenario
         
-        # Generate and display report
+        # Generate report
         report = generate_investment_report(
             npv, irr, payback, initial_investment, revenues, profits, 
             adjusted_margins, cost_growth_rate, growth_rate, 
             selected_revenue, cost_scenario
         )
         
+        # Display report in Streamlit
         st.markdown(report)
         
-        # Add download button for report
-        report_download = report.replace('##', '#').replace('*', '-')
-        st.download_button(
-            label="Download Report",
-            data=report_download,
-            file_name="franchise_investment_analysis.md",
-            mime="text/markdown"
-        )
+        # Create PDF
+        pdf = create_pdf_report(report)
+        
+        # Save PDF to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            pdf.output(tmp_file.name)
+            
+            # Add download button
+            with open(tmp_file.name, 'rb') as pdf_file:
+                pdf_bytes = pdf_file.read()
+                st.download_button(
+                    label="Download PDF Report",
+                    data=pdf_bytes,
+                    file_name="franchise_investment_analysis.pdf",
+                    mime="application/pdf"
+                )
     else:
         st.warning("Please complete the financial analysis first to generate the investment report.")
 
