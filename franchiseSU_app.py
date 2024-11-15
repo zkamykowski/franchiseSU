@@ -91,6 +91,13 @@ def startup_costs_tab():
         'Additional Funds (3 Months)': {'low': 40000, 'high': 80000}
     }
     
+    # Calculate scenario totals for use in other tabs
+    st.session_state.startup_costs = {
+        'Low Cost': sum(v['low'] for v in default_startup_costs.values()),
+        'Average Cost': sum((v['low'] + v['high'])/2 for v in default_startup_costs.values()),
+        'High Cost': sum(v['high'] for v in default_startup_costs.values())
+    }
+    
     # Scenario Selection
     cost_scenario = st.selectbox(
         'Select Cost Scenario',
@@ -122,7 +129,7 @@ def startup_costs_tab():
             max_val = default_startup_costs[category]['high']
             
             # Create number input with appropriate step size
-            step = 100 if max_val > 10000 else 50
+            step = 100.0 if max_val > 10000 else 50.0
             current_value = st.number_input(
                 f"Amount for {category}",
                 min_value=min_val * 0.5,  # Allow going 50% below minimum
@@ -389,7 +396,7 @@ def create_tornado_plot(base_params):
         'initial_investment': {'variation': 20, 'label': 'Initial Investment (±20%)'},
         'growth_rate': {'variation': 2, 'label': 'Growth Rate (±2%)'},
         'discount_rate': {'variation': 2, 'label': 'Discount Rate (±2%)'},
-        'cost_growth': {'variation': 2, 'label': 'Cost Growth Rate (��2%)'}
+        'cost_growth': {'variation': 2, 'label': 'Cost Growth Rate (2%)'}
     }
     
     # Calculate base NPV
@@ -451,13 +458,6 @@ def create_tornado_plot(base_params):
 def financial_analysis_tab():
     st.title('Financial Analysis')
     
-    # Define startup costs dictionary
-    startup_costs = {
-        'Low Cost': 428500,
-        'Average Cost': 583500,
-        'High Cost': 738500
-    }
-    
     # Initial Investment Section
     st.header('Initial Investment')
     selected_cost = st.selectbox(
@@ -467,8 +467,12 @@ def financial_analysis_tab():
         key='startup_cost_select'
     )
     
-    # Display the selected investment amount
-    initial_investment = startup_costs[selected_cost]
+    # Get investment amount from session state
+    if 'startup_costs' not in st.session_state:
+        st.error("Please visit the Startup Costs tab first to initialize investment amounts.")
+        st.stop()
+    
+    initial_investment = st.session_state.startup_costs[selected_cost]
     st.write(f"Initial Investment: **${initial_investment:,.0f}**")
     
     # Business Scenario Section
