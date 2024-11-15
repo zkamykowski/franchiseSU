@@ -540,8 +540,123 @@ def financial_analysis_tab():
     st.session_state.current_revenue_scenario = selected_revenue
     st.session_state.current_cost_scenario = cost_scenario
     
-    # Display results and charts
-    # ... [rest of the display code remains the same]
+    # Display Investment Metrics
+    st.header('Investment Metrics')
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Net Present Value", f"${npv:,.0f}")
+    with col2:
+        st.metric("Internal Rate of Return", f"{irr:.1f}%")
+    with col3:
+        st.metric("Payback Period", f"{payback:.1f} years")
+    
+    # Revenue and Profit Projections
+    st.header('Revenue and Profit Projections')
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=list(years),
+        y=revenues,
+        name='Revenue',
+        line=dict(color='blue')
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=list(years),
+        y=profits,
+        name='Profit',
+        line=dict(color='green')
+    ))
+    
+    fig.update_layout(
+        title=f"{selected_revenue} Scenario ({growth_rate:+.1f}% Growth)",
+        xaxis_title="Year",
+        yaxis_title="Amount ($)",
+        template='plotly_white'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Margin Analysis
+    st.header('Margin Analysis')
+    
+    st.write("""
+    The Gross Margin Projection chart shows how your profit margins may evolve over time:
+    - **Blue Line**: Shows the projected gross margin after accounting for cost increases
+    - **Gray Dashed Line**: Shows the baseline gross margin of 25.07% for comparison
+    - The gap between the lines represents margin erosion due to rising costs
+    - Steeper decline indicates more significant impact from cost growth
+    - This analysis helps identify when cost management or price adjustments may be needed
+    """)
+    
+    fig_margins = go.Figure()
+    
+    fig_margins.add_trace(go.Scatter(
+        x=list(years),
+        y=[margin * 100 for margin in adjusted_margins],
+        name='Adjusted Gross Margin',
+        line=dict(color='blue')
+    ))
+    
+    fig_margins.add_trace(go.Scatter(
+        x=list(years),
+        y=[base_margin * 100] * len(years),
+        name='Base Gross Margin',
+        line=dict(color='gray', dash='dash')
+    ))
+    
+    fig_margins.update_layout(
+        title="Gross Margin Projection",
+        xaxis_title="Year",
+        yaxis_title="Gross Margin (%)",
+        template='plotly_white'
+    )
+    
+    st.plotly_chart(fig_margins, use_container_width=True)
+    
+    # Financial Summary
+    st.header('Financial Summary')
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader('Revenue Metrics')
+        st.write(f"Year 1 Revenue: ${revenues[0]:,.0f}")
+        st.write(f"Year 10 Revenue: ${revenues[-1]:,.0f}")
+        st.write(f"Average Annual Revenue: ${sum(revenues)/len(revenues):,.0f}")
+        st.write(f"Total Revenue Growth: {((revenues[-1]/revenues[0] - 1) * 100):,.1f}%")
+    
+    with col2:
+        st.subheader('Profit Metrics')
+        st.write(f"Year 1 Profit: ${profits[0]:,.0f}")
+        st.write(f"Year 10 Profit: ${profits[-1]:,.0f}")
+        st.write(f"Average Annual Profit: ${sum(profits)/len(profits):,.0f}")
+        st.write(f"Final Year Margin: {(profits[-1]/revenues[-1] * 100):,.1f}%")
+    
+    # Sensitivity Analysis (Tornado Plot)
+    st.header('Sensitivity Analysis')
+    
+    # Create base parameters dictionary
+    base_params = {
+        'initial_investment': initial_investment,
+        'base_revenue': base_revenue,
+        'growth_rate': growth_rate,
+        'discount_rate': discount_rate,
+        'cost_growth': cost_growth_rate
+    }
+    
+    # Create and display tornado plot
+    tornado_fig = create_tornado_plot(base_params)
+    st.plotly_chart(tornado_fig, use_container_width=True)
+    
+    st.write("""
+    This tornado plot shows how changes in key input parameters affect the NPV:
+    - Bars extending to the right (blue) show the impact of increasing the parameter
+    - Bars extending to the left (red) show the impact of decreasing the parameter
+    - Longer bars indicate higher sensitivity to that parameter
+    - Parameters are sorted by their impact magnitude
+    """)
 
 def generate_investment_report(npv, irr, payback, initial_investment, revenues, profits, adjusted_margins, 
                              cost_growth_rate, growth_rate, selected_revenue, cost_scenario):
