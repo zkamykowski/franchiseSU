@@ -828,9 +828,9 @@ def create_pdf_report(report_content):
                 continue
                 
             if line.startswith('*'):
-                # Handle bullet points
+                # Handle bullet points using a simple hyphen
                 pdf.set_x(25)  # Indent
-                text = '• ' + line.strip('* ')
+                text = '- ' + line.strip('* ')  # Using hyphen instead of bullet
                 # Split long lines
                 words = text.split()
                 line = ''
