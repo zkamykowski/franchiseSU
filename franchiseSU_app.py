@@ -57,6 +57,17 @@ def calculate_scenario_revenues(base_revenue, scenario, growth_rate, years):
     starting_revenue = base_revenue * (1 + start_pct/100)
     return [starting_revenue * (1 + growth_rate/100) ** (year-1) for year in years]
 
+def calculate_adjusted_margins(base_margin, years, cost_growth_rate):
+    """Calculate margins accounting for compound cost growth effects"""
+    adjusted_margins = []
+    for year in years:
+        # Compound effect of cost increases
+        cost_multiplier = (1 + cost_growth_rate/100) ** (year-1)
+        # Margin compression follows a more natural curve
+        new_margin = base_margin / cost_multiplier
+        adjusted_margins.append(new_margin)
+    return adjusted_margins
+
 def startup_costs_tab():
     st.title('Startup Costs Analysis')
     
@@ -206,7 +217,7 @@ def revenue_projections_tab():
     years = range(1, 11)
     revenues = calculate_scenario_revenues(base_revenue, selected_revenue, growth_rate, years)
     base_margin = 0.2507
-    adjusted_margins = [base_margin * (1 - (cost_growth_rate/100) * year) for year in years]
+    adjusted_margins = calculate_adjusted_margins(base_margin, years, cost_growth_rate)
     profits = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
 
     # Display projection chart first
@@ -506,10 +517,16 @@ def financial_analysis_tab():
         growth_rate = 5
 
     # Calculate adjusted margins based on cost growth
-    def calculate_adjusted_margins(base_margin, year, cost_growth_rate):
-        cost_multiplier = (1 + cost_growth_rate/100) ** year
-        # Adjust the margin inversely to cost growth
-        return base_margin - (base_margin * (cost_multiplier - 1))
+    def calculate_adjusted_margins(base_margin, years, cost_growth_rate):
+        """Calculate margins accounting for compound cost growth effects"""
+        adjusted_margins = []
+        for year in years:
+            # Compound effect of cost increases
+            cost_multiplier = (1 + cost_growth_rate/100) ** (year-1)
+            # Margin compression follows a more natural curve
+            new_margin = base_margin / cost_multiplier
+            adjusted_margins.append(new_margin)
+        return adjusted_margins
 
     # Calculate cash flows with cost adjustments
     initial_investment = startup_costs[selected_cost]
@@ -520,7 +537,7 @@ def financial_analysis_tab():
     
     # Adjust profit margins for each year based on cost growth
     base_margin = 0.2507  # Initial gross profit margin
-    adjusted_margins = [calculate_adjusted_margins(base_margin, year, cost_growth_rate) for year in years]
+    adjusted_margins = calculate_adjusted_margins(base_margin, years, cost_growth_rate)
     cash_flows = [rev * margin for rev, margin in zip(revenues, adjusted_margins)]
     
     # Calculate metrics with adjusted cash flows
