@@ -715,17 +715,17 @@ def generate_investment_report(npv, irr, payback, initial_investment, revenues, 
     
     performance = f"""
     ## Financial Performance
-    The business is projected to grow from ${revenues[0]:,.0f} to ${year_10_revenue:,.0f} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
+    The business is projected to grow from ${revenues[0]:,.0f} to ${revenues[-1]:,.0f} in Year 10, with an annual growth rate of {growth_rate:.1f}%.
 
     Key revenue metrics:
     * Year 1 Revenue: ${revenues[0]:,.0f}
-    * Year 10 Revenue: ${year_10_revenue:,.0f}
+    * Year 10 Revenue: ${revenues[-1]:,.0f}
     * Average Annual Revenue: ${avg_revenue:,.0f}
-    * Total Growth: {((year_10_revenue/revenues[0] - 1) * 100):.1f}%
+    * Total Growth: {((revenues[-1]/revenues[0] - 1) * 100):.1f}%
 
     Profitability metrics:
     * Year 1 Profit: ${profits[0]:,.0f}
-    * Year 10 Profit: ${year_10_profit:,.0f}
+    * Year 10 Profit: ${profits[-1]:,.0f}
     * Average Annual Profit: ${avg_profit:,.0f}
     * Final Year Margin: {(final_margin * 100):.1f}%
     """
